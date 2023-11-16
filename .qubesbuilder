@@ -1,0 +1,4 @@
+host:
+  rpm:
+    build:
+    - vmm-xen-unified.spec

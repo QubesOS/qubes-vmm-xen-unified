@@ -1,0 +1,66 @@
+# The Qubes OS Project, https://www.qubes-os.org
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, see <https://www.gnu.org/licenses/>.
+
+%define XEN_VERSION %(echo @VERSION@ | cut -d '+' -f1 | tr 'r' '-')
+%define LINUX_VERSION %(echo @VERSION@ | cut -d '+' -f2 | tr 'r' '-')
+
+%global debug_package %{nil}
+
+Name:       qubes-vmm-xen-unified
+Version:    @VERSION@
+Release:    1%{?dist}
+Summary:    Unified Xen Linux Kernel Signed Image
+
+Group:      Qubes
+Vendor:     Invisible Things Lab
+License:    GPLv3
+URL:        https://www.qubes-os.org
+
+Source0:    %{name}-%{version}.tar.gz
+
+BuildRequires: xen-hypervisor = 2001:%{XEN_VERSION}%{?dist}
+BuildRequires: kernel-latest = 1000:%{LINUX_VERSION}.qubes%{?dist}
+BuildRequires: pesign
+BuildRequires: python3-rpm
+BuildRequires: qubes-core-dom0-linux >= 4.2.15-1
+
+%description
+%{summary}.
+
+%prep
+%setup -q
+
+%build
+
+# Generate an initramfs that will be used with uki-generate
+dracut --no-hostonly --kver %{LINUX_VERSION}.qubes%{?dist}.%{_arch} %{_builddir}/initramfs-%{LINUX_VERSION}.qubes%{?dist}.%{_arch}.img
+
+# Create an empty config file
+touch %{_builddir}/empty_config
+
+# Generate Unified Kernel Image
+/usr/lib/qubes/uki-generate /boot/efi/EFI/qubes/xen.efi %{_builddir}/empty_config /boot/vmlinuz-%{LINUX_VERSION}.qubes%{?dist}.%{_arch} %{_builddir}/initramfs-%{LINUX_VERSION}.qubes%{?dist}.%{_arch}.img %{_builddir}/xen-%{version}-%{release}.efi
+
+# Sign the UKI with pesign
+pesign-client -s -i %{_builddir}/xen-%{version}-%{release}.efi -o %{_builddir}/xen-signed-%{version}-%{release}.efi -c "Qubes OS UEFI CA"
+
+%install
+install -D -m 0700 -- %{_builddir}/xen-%{version}-%{release}.efi "$RPM_BUILD_ROOT"/boot/xen-signed-%{version}-%{release}.efi
+
+%files
+%attr(700,root,root) /boot/xen-signed-%{version}-%{release}.efi
+
+%changelog
+@CHANGELOG@
