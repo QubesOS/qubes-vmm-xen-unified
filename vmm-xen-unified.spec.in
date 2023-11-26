@@ -59,6 +59,10 @@ pesign-client -s -i %{_builddir}/xen-%{version}-%{release}.efi -o %{_builddir}/x
 %install
 install -D -m 0700 -- %{_builddir}/xen-%{version}-%{release}.efi "$RPM_BUILD_ROOT"/boot/xen-signed-%{version}-%{release}.efi
 
+%check
+# Show checksum
+sha256sum "$RPM_BUILD_ROOT"/boot/xen-signed-%{version}-%{release}.efi
+
 %files
 %attr(700,root,root) /boot/xen-signed-%{version}-%{release}.efi
 
