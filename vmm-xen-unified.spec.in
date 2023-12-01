@@ -54,7 +54,7 @@ touch %{_builddir}/empty_config
 /usr/lib/qubes/uki-generate /boot/efi/EFI/qubes/xen.efi %{_builddir}/empty_config /boot/vmlinuz-%{LINUX_VERSION}.qubes%{?dist}.%{_arch} %{_builddir}/initramfs-%{LINUX_VERSION}.qubes%{?dist}.%{_arch}.img %{_builddir}/xen-%{version}-%{release}.efi
 
 # Sign the UKI with pesign
-pesign-client -s -i %{_builddir}/xen-%{version}-%{release}.efi -o %{_builddir}/xen-signed-%{version}-%{release}.efi -c "Qubes OS UEFI CA"
+socat - UNIX:/var/run/qubes-pesign < %{_builddir}/xen-%{version}-%{release}.efi > %{_builddir}/xen-signed-%{version}-%{release}.efi
 
 %install
 install -D -m 0700 -- %{_builddir}/xen-%{version}-%{release}.efi "$RPM_BUILD_ROOT"/boot/xen-signed-%{version}-%{release}.efi
