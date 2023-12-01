@@ -48,10 +48,12 @@ BuildRequires: qubes-core-dom0-linux >= 4.2.15-1
 dracut --no-hostonly --kver %{LINUX_VERSION}.qubes%{?dist}.%{_arch} %{_builddir}/initramfs-%{LINUX_VERSION}.qubes%{?dist}.%{_arch}.img
 
 # Create an empty config file
-touch %{_builddir}/empty_config
+cat > %{_builddir}/config << EOF
+[global]
+EOF
 
 # Generate Unified Kernel Image
-/usr/lib/qubes/uki-generate /boot/efi/EFI/qubes/xen.efi %{_builddir}/empty_config /boot/vmlinuz-%{LINUX_VERSION}.qubes%{?dist}.%{_arch} %{_builddir}/initramfs-%{LINUX_VERSION}.qubes%{?dist}.%{_arch}.img %{_builddir}/xen-%{version}-%{release}.efi
+/usr/lib/qubes/uki-generate /boot/efi/EFI/qubes/xen.efi %{_builddir}/config /boot/vmlinuz-%{LINUX_VERSION}.qubes%{?dist}.%{_arch} %{_builddir}/initramfs-%{LINUX_VERSION}.qubes%{?dist}.%{_arch}.img %{_builddir}/xen-%{version}-%{release}.efi
 
 # Sign the UKI with pesign
 socat - UNIX:/var/run/qubes-pesign < %{_builddir}/xen-%{version}-%{release}.efi > %{_builddir}/xen-signed-%{version}-%{release}.efi

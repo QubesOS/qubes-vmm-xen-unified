@@ -55,6 +55,7 @@ EFI_IMG_DEV=${IMG_LOOP}p1
 mount "${EFI_IMG_DEV}" "${MNTDIR}"
 mkdir -p "${MNTDIR}/EFI/BOOT/"
 rpm2cpio "${RPM}" | cpio -i --to-stdout './boot/xen-signed-*.efi' > "${MNTDIR}/EFI/BOOT/bootx64.efi"
+cp "${MNTDIR}/EFI/BOOT/bootx64.efi" "$OUTPUTDIR"
 
 # Debug info
 tree "${MNTDIR}"
