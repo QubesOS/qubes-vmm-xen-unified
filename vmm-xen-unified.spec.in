@@ -29,6 +29,7 @@ License:    GPLv3
 URL:        https://www.qubes-os.org
 
 Source0:    %{name}-%{version}.tar.gz
+Source1:    25_unified_xen_linux
 
 BuildRequires: xen-hypervisor = 2001:%{XEN_VERSION}%{?dist}
 BuildRequires: kernel-latest = 1000:%{LINUX_VERSION}.qubes%{?dist}
@@ -59,14 +60,21 @@ EOF
 socat - UNIX:/var/run/qubes-pesign < %{_builddir}/xen-%{version}-%{release}.efi > %{_builddir}/xen-signed-%{version}-%{release}.efi
 
 %install
-install -D -m 0700 -- %{_builddir}/xen-%{version}-%{release}.efi "$RPM_BUILD_ROOT"/boot/xen-signed-%{version}-%{release}.efi
+install -D -m 0700 -- %{_builddir}/xen-%{version}-%{release}.efi "$RPM_BUILD_ROOT"/boot/uki-xen-signed-%{version}-%{release}.efi
+install -D -m 0755 -- %{SOURCE1} "$RPM_BUILD_ROOT"/etc/grub.d/25_unified_xen_linux
 
 %check
 # Show checksum
-sha256sum "$RPM_BUILD_ROOT"/boot/xen-signed-%{version}-%{release}.efi
+sha256sum "$RPM_BUILD_ROOT"/boot/uki-xen-signed-%{version}-%{release}.efi
 
 %files
-%attr(700,root,root) /boot/xen-signed-%{version}-%{release}.efi
+%attr(700,root,root) /boot/uki-xen-signed-%{version}-%{release}.efi
+%attr(755,root,root) /etc/grub.d/25_unified_xen_linux
+
+%posttrans
+if [ -x /usr/sbin/grub2-mkconfig ] && [ -e /boot/grub2/grub.cfg ]; then
+    grub2-mkconfig -o /boot/grub2/grub.cfg
+fi
 
 %changelog
 @CHANGELOG@
