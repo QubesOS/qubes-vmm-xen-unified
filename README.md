@@ -25,3 +25,13 @@ sudo qemu-system-x86_64 \
   -drive id=pflash-vars-overlay0,if=pflash,file=pflash-vars-overlay0,unit=1 \
   /path/to/output/dir/build.img
 ```
+
+### Socket Access
+
+To access the `qubes-pesign` socket, typically when building this package in a Qubes executor, create the socket with `socat` like this:
+```bash
+socat UNIX-LISTEN:/var/run/qubes-pesign,fork EXEC:"qrexec-client-vm vault-uki qubes.PESign"
+```
+where `vault-uki` is the qube holding the standard configuration for `pesign`.
+Ensure the Qubes executor has the correct RPC policy.
+This socat command can be placed in `/rw/config/rc.local` to run at startup.
