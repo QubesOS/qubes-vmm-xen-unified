@@ -26,12 +26,105 @@ sudo qemu-system-x86_64 \
   /path/to/output/dir/build.img
 ```
 
-### Socket Access
+### `vault-pesign` - PEsign certificate generation helper in a vault qube
 
-To access the `qubes-pesign` socket, typically when building this package in a Qubes executor, create the socket with `socat` like this:
+Setup manually NSS DB or use the following helper script:
 ```bash
-socat UNIX-LISTEN:/var/run/qubes-pesign,fork EXEC:"qrexec-client-vm vault-uki qubes.PESign"
+#!/bin/bash
+set -ex
+
+KEYS_DIR=/home/user/keys
+CERT_DB_DIR=/etc/pki/pesign
+
+# Remove existing files and create necessary directories
+rm -rf "${KEYS_DIR}" "${CERT_DB_DIR}"
+mkdir -p "${KEYS_DIR}" "${CERT_DB_DIR}"
+
+# Generate CA certificate and key
+openssl req \
+    -nodes \
+    -new \
+    -x509 \
+    -newkey rsa:4096 \
+    -sha256 \
+    -keyout "${KEYS_DIR}/key.pem" \
+    -out "${KEYS_DIR}/cert.pem" \
+    -days 3650 \
+    -subj "/CN=Qubes OS Unified Kernel Image Signing Key/"
+
+# Export the key and certificate to PKCS#12 format
+openssl pkcs12 \
+    -export \
+    -inkey "${KEYS_DIR}/key.pem" \
+    -in "${KEYS_DIR}/cert.pem" \
+    -name "Qubes OS Unified Kernel Image Signing Key" \
+    -out "${KEYS_DIR}/secure_boot.p12" \
+    -passout pass: \
+    -passin pass:""
+
+# Initialize the certificate database
+certutil -d "${CERT_DB_DIR}" -N --empty-password
+
+# Import the PKCS#12 file into the certificate database
+pk12util \
+    -d sql:${CERT_DB_DIR} \
+    -i "${KEYS_DIR}/secure_boot.p12" \
+    -W ""
+
+# Verify the imported certificates
+certutil -d "${CERT_DB_DIR}" -L
+
+# Set ownerships
+chown -R pesign:pesign "${CERT_DB_DIR}"
+chmod -R 664 "${CERT_DB_DIR}"
+chmod 775 "${CERT_DB_DIR}"
 ```
-where `vault-uki` is the qube holding the standard configuration for `pesign`.
-Ensure the Qubes executor has the correct RPC policy.
-This socat command can be placed in `/rw/config/rc.local` to run at startup.
+
+Add `user` to the group `pesign` permanently:
+```bash
+echo usermod -aG pesign user | sudo tee -a /rw/config/rc.local
+````
+
+### `builder-dvm` - Socket Access
+
+Add to `/rw/config/rc.local`:
+```bash
+echo 'KEY_NAME="Qubes OS Unified Kernel Image Signing Key"' | sudo tee /etc/default/qubes-pesign
+```
+
+Create `/usr/local/bin/start-qubes-pesign.sh`:
+```bash
+#!/bin/bash
+set -ex
+source /etc/default/qubes-pesign
+exec /usr/bin/socat UNIX-LISTEN:/var/run/qubes-pesign,fork,group=qubes,mode=660 EXEC:"/usr/bin/qrexec-client-vm vault-pesign qubes.PESign+${KEY_NAME// /__}"
+```
+
+```bash
+sudo chmod +x /usr/local/bin/start-qubes-pesign.sh
+```
+
+Create the `/etc/systemd/system/qubes-pesign.service`:
+```ini
+[Unit]
+Description=Qubes PESign Service
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/default/qubes-pesign
+ExecStart=/usr/local/bin/start-qubes-pesign.sh
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Reload and enable daemon:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable qubes-pesign
+```
+
+Ensure the Qubes executor `builder-dvm` has the correct RPC policy set up.
+
