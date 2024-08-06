@@ -92,39 +92,29 @@ Add to `/rw/config/rc.local`:
 echo 'KEY_NAME="Qubes OS Unified Kernel Image Signing Key"' | sudo tee /etc/default/qubes-pesign
 ```
 
-Create `/usr/local/bin/start-qubes-pesign.sh`:
+Copy `start-qubes-pesign.sh` to `/usr/local/bin/start-qubes-pesign.sh` and ensure it's executable:
 ```bash
-#!/bin/bash
-set -ex
-source /etc/default/qubes-pesign
-exec /usr/bin/socat UNIX-LISTEN:/var/run/qubes-pesign,fork,group=qubes,mode=660 EXEC:"/usr/bin/qrexec-client-vm vault-pesign qubes.PESign+${KEY_NAME// /__}"
-```
-
-```bash
+sudo cp start-qubes-pesign.sh /usr/local/bin/
 sudo chmod +x /usr/local/bin/start-qubes-pesign.sh
 ```
 
-Create the `/etc/systemd/system/qubes-pesign.service`:
-```ini
-[Unit]
-Description=Qubes PESign Service
-After=network.target
+Configure bind-dirs for `qubes-pesign.service`.
 
-[Service]
-Type=simple
-EnvironmentFile=/etc/default/qubes-pesign
-ExecStart=/usr/local/bin/start-qubes-pesign.sh
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
+First, create `/rw/config/qubes-bind-dirs.d/50_user.conf`:
+```
+binds+=( '/etc/systemd/system/qubes-pesign.service' )
 ```
 
-Reload and enable daemon:
+Second, create the service file in the bind directory:
+```bash
+mkdir -p /rw/bind-dirs/etc/systemd/system/
+cp qubes-pesign.service /rw/bind-dirs/etc/systemd/system/
+```
+
+Finally, reload and enable the daemon:
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable qubes-pesign
 ```
 
-Ensure the Qubes executor `builder-dvm` has the correct RPC policy set up.
-
+> Remark: Ensure the Qubes executor `builder-dvm` has the correct RPC policy set up.

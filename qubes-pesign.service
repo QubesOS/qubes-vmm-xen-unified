@@ -1,0 +1,12 @@
+[Unit]
+Description=Qubes PESign Service
+After=qubes-qrexec-agent.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/default/qubes-pesign
+ExecStart=/usr/local/bin/start-qubes-pesign.sh
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
